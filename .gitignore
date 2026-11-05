@@ -1,0 +1,12 @@
+__pycache__/
+*.egg-info/
+.venv/
+.pytest_cache/
+data/
+*.pt
+*.safetensors
+results/**/adapter/
+results/samples/
+results/judge_cache.jsonl
+*.wav
+*.flac

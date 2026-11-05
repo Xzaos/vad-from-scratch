@@ -1,0 +1,25 @@
+[project]
+name = "vad-from-scratch"
+version = "0.1.0"
+description = "Streaming voice activity detection trained on synthetic mixtures, benchmarked against Silero and an energy baseline"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.24",
+    "torch>=2.3",
+    "torchaudio>=2.3",
+    "soundfile",
+]
+
+[project.optional-dependencies]
+silero = ["silero-vad>=5.1"]
+dev = ["pytest"]
+
+[project.scripts]
+vad = "vad.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
