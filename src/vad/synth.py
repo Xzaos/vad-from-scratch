@@ -17,6 +17,7 @@ test score is never on a speaker or noise recording the model has heard.
 from __future__ import annotations
 
 import hashlib
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -49,13 +50,23 @@ class Example:
     meta: dict = field(default_factory=dict)
 
 
-def split_files(files: list[Path], test_frac: float = 0.2, salt: str = "vad") -> tuple[list[Path], list[Path]]:
-    """Deterministic split by file name hash. For datasets where the speaker
-    id is in the path (e.g. LibriSpeech's spk/chapter/file), pass the speaker
-    directory instead of the file to get a speaker-disjoint split."""
+_ESC50 = re.compile(r"^\d-(\d+)-[A-Z]-\d+\.wav$")
+
+
+def source_key(f: Path) -> str:
+    """What has to stay on one side of a split. ESC-50 names are
+    fold-source-take-class, and takes A/B/C of one source are cuts of the
+    same recording, so they group by source. Everything else groups by file."""
+    m = _ESC50.match(f.name)
+    return f"esc50-{m.group(1)}" if m else f.name
+
+
+def split_files(files: list[Path], test_frac: float = 0.2, salt: str = "vad", key=source_key) -> tuple[list[Path], list[Path]]:
+    """Deterministic split by a hash of `key(file)`, so every file with the
+    same key lands on the same side."""
     train, test = [], []
     for f in sorted(files):
-        h = int(hashlib.md5(f"{salt}{f.name}".encode()).hexdigest(), 16) % 1000
+        h = int(hashlib.md5(f"{salt}{key(f)}".encode()).hexdigest(), 16) % 1000
         (test if h < test_frac * 1000 else train).append(f)
     return train, test
 

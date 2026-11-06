@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Train and benchmark. ~20 min on a T4, about an hour on a laptop CPU.
+# Train and benchmark. About 20 min of training on a T4, plus a few minutes
+# of benchmarking (Silero runs on CPU, one 32 ms chunk at a time).
 set -euo pipefail
-ARGS="--speech data/speech --noise data/noise"
+ARGS="--speech data/speech --speech-test data/speech_test --noise data/noise"
 
 vad dump $ARGS --n 8                       # listen to a few mixtures first
 vad train $ARGS --epochs 20 --steps 200 --out results/run

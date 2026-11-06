@@ -88,3 +88,29 @@ def test_metrics():
     assert roc_auc(np.array([0.1, 0.2, 0.8, 0.9]), g) == 1.0
     assert roc_auc(np.array([0.5, 0.5, 0.5, 0.5]), g) == pytest.approx(0.5)
     assert frame_f1(np.array([1, 1, 1, 1]), g)["false_alarm"] == 1.0
+
+
+def test_esc50_takes_of_one_source_stay_together():
+    from pathlib import Path
+
+    from vad.synth import source_key
+
+    # takes A, B, C of each source recording, across many sources
+    files = [Path(f"1-{100000 + s}-{t}-0.wav") for s in range(300) for t in "ABC"]
+    tr, te = split_files(files)
+    assert {source_key(f) for f in tr}.isdisjoint({source_key(f) for f in te})
+    assert source_key(Path("4-171207-A-12.wav")) == source_key(Path("4-171207-C-12.wav"))
+    assert source_key(Path("10017.wav")) == "10017.wav"
+
+
+def test_paired_bootstrap_interval():
+    from vad.bench import _f1, paired_f1_diff
+
+    rng = np.random.default_rng(0)
+    a = np.stack([rng.integers(80, 100, 50), rng.integers(0, 5, 50), rng.integers(0, 5, 50)], 1)
+    b = np.stack([rng.integers(50, 70, 50), rng.integers(20, 30, 50), rng.integers(20, 30, 50)], 1)
+    d = paired_f1_diff(a, b)
+    assert d["lo"] < d["diff"] < d["hi"] and d["lo"] > 0
+    same = paired_f1_diff(a, a)
+    assert same["diff"] == 0 and same["lo"] == 0 and same["hi"] == 0
+    assert _f1(np.array([10, 0, 0])) == 1.0
