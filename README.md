@@ -2,7 +2,7 @@
 
 A 58K-parameter streaming voice activity detector trained only on synthetic mixtures, compared against Silero VAD and an energy baseline at five noise levels, on noise types it trained on and on noise types it has never heard.
 
-Headline result: _ (fill in from results/bench.md after the run)
+Headline result: on noise types it never trained on, TinyVAD beats Silero's frame F1 at every SNR, by 0.02 to 0.03 at 0 dB and above and by 0.085 at -5 dB. All the 95% intervals exclude zero. Most of the high-SNR gap is probably label convention rather than better detection (see below); the -5 dB gap is not.
 
 ## The data problem, and the workaround
 
@@ -35,9 +35,9 @@ Log-mel (40 bins, 25 ms window, 10 ms hop), then two causal 1D convolutions, a u
 
 | | |
 |---|---|
-| parameters | _ |
-| CPU time per 10 ms frame (1 thread) | _ ms |
-| real-time factor | _ |
+| parameters | 58,513 |
+| CPU time per 10 ms frame (1 thread, Colab CPU) | 0.37 ms |
+| real-time factor | 0.037 |
 
 ## Results
 
@@ -47,25 +47,33 @@ Noise classes never seen in training:
 
 | SNR (dB) | all-speech F1 | energy F1 | TinyVAD F1 | Silero F1 | TinyVAD minus Silero (95% CI) |
 |---|---|---|---|---|---|
-| 20 | _ | _ | _ | _ | _ |
-| 10 | _ | _ | _ | _ | _ |
-| 5 | _ | _ | _ | _ | _ |
-| 0 | _ | _ | _ | _ | _ |
-| -5 | _ | _ | _ | _ | _ |
+| 20 | 0.629 | 0.769 | 0.959 | 0.931 | +0.028 [+0.019, +0.039] |
+| 10 | 0.598 | 0.704 | 0.957 | 0.925 | +0.032 [+0.021, +0.042] |
+| 5 | 0.612 | 0.673 | 0.917 | 0.900 | +0.017 [+0.005, +0.029] |
+| 0 | 0.626 | 0.692 | 0.904 | 0.873 | +0.032 [+0.015, +0.048] |
+| -5 | 0.612 | 0.635 | 0.858 | 0.773 | +0.085 [+0.054, +0.117] |
 
 Held-out recordings, noise classes seen in training:
 
 | SNR (dB) | all-speech F1 | energy F1 | TinyVAD F1 | Silero F1 | TinyVAD minus Silero (95% CI) |
 |---|---|---|---|---|---|
-| 20 | _ | _ | _ | _ | _ |
-| 10 | _ | _ | _ | _ | _ |
-| 5 | _ | _ | _ | _ | _ |
-| 0 | _ | _ | _ | _ | _ |
-| -5 | _ | _ | _ | _ | _ |
+| 20 | 0.596 | 0.730 | 0.957 | 0.929 | +0.028 [+0.020, +0.037] |
+| 10 | 0.629 | 0.721 | 0.942 | 0.911 | +0.031 [+0.019, +0.043] |
+| 5 | 0.628 | 0.693 | 0.925 | 0.901 | +0.024 [+0.015, +0.034] |
+| 0 | 0.649 | 0.698 | 0.890 | 0.855 | +0.036 [+0.020, +0.052] |
+| -5 | 0.616 | 0.620 | 0.850 | 0.754 | +0.097 [+0.064, +0.133] |
 
 The all-speech column is the F1 of a detector that calls every frame speech. Any system near that number isn't detecting much. AUC, miss rate and false-alarm rate per SNR and condition are in [results/bench.json](results/bench.json), and the full tables are in [results/bench.md](results/bench.md).
 
-What I read from these: _
+Speech is 42 to 48% of frames in every test set, so a detector that calls everything speech scores about 0.6 F1. The energy baseline barely clears that: at -5 dB it scores 0.620 against a floor of 0.616, and its AUC falls from 0.85 to 0.63 as the noise gets louder.
+
+TinyVAD does as well on the eight noise classes it never trained on as on the held-out recordings of classes it did see. At 10 dB it scores 0.957 unseen and 0.942 seen. So its lead doesn't come from having heard the noise.
+
+That doesn't make it a better VAD than Silero. At 20 dB the AUCs are 0.995 and 0.977, so both systems rank frames almost perfectly, and the F1 gap there probably comes from where each puts speech boundaries. TinyVAD learned this repo's convention (energy 35 dB below peak, pauses under 100 ms filled, 10 ms frames). Silero has its own convention and scores 32 ms chunks. I haven't measured how much F1 that mismatch costs, but it could plausibly account for a 0.03 gap. Scoring both systems against forced-alignment boundaries would settle it.
+
+The -5 dB result is different. The AUC gap widens to 0.950 against 0.881, which is a ranking difference, not a threshold or boundary one. Silero falls off faster in heavy noise than TinyVAD does, at least on this mix of read Indic speech, ESC-50 noise and a 30% share of phone-line audio. Whether that holds on real noisy recordings is the open question.
+
+The whole model costs 0.37 ms of one CPU thread per 10 ms of audio, about 4% of real time.
 
 ## Running it
 
