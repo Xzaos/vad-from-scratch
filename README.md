@@ -1,4 +1,4 @@
-# vad-from-scratch
+# VAD from scratch
 
 A 58K-parameter streaming voice activity detector trained only on synthetic mixtures, compared against Silero VAD and an energy baseline at five noise levels, on noise types it trained on and on noise types it has never heard.
 
