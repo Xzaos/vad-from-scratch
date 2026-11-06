@@ -114,3 +114,11 @@ def test_paired_bootstrap_interval():
     same = paired_f1_diff(a, a)
     assert same["diff"] == 0 and same["lo"] == 0 and same["hi"] == 0
     assert _f1(np.array([10, 0, 0])) == 1.0
+
+
+def test_long_clips_are_cropped_so_mixtures_have_silence():
+    long = np.tile(tone(1.0), 12)  # 12 s of continuous "speech"
+    s = Synthesizer([long], [white(3.0)], SynthConfig(duration_s=8.0, telephony_prob=0.0, noise_free_prob=0.0))
+    rng = np.random.default_rng(0)
+    frac = np.mean([s.make(rng, snr_db=10).labels.mean() for _ in range(30)])
+    assert 0.2 < frac < 0.75

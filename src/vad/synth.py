@@ -32,6 +32,10 @@ WIN = 400  # 25 ms
 class SynthConfig:
     duration_s: float = 8.0
     speech_segments: tuple[int, int] = (1, 4)
+    # Each placed clip is a random crop of this length. FLEURS utterances run
+    # around 10 s, longer than the timeline, so without cropping one clip
+    # fills the whole example and most frames are speech.
+    segment_s: tuple[float, float] = (0.8, 3.0)
     gap_s: tuple[float, float] = (0.2, 2.0)
     snr_db: tuple[float, ...] = (20, 10, 5, 0, -5)
     speech_gain_db: tuple[float, float] = (-12, 0)
@@ -144,11 +148,18 @@ class Synthesizer:
             room = total - pos
             if room < WIN * 4:
                 break
-            clip = clip[:room]
+            # Scale by the whole clip's peak before cropping, so a crop that
+            # lands in a quiet stretch stays quiet instead of being blown up.
+            scale = 1.0 / (np.abs(clip).max() + 1e-9)
+            # frame labels back to sample resolution, cropped with the audio
+            sl = np.repeat(flab, HOP)
+            sl = np.pad(sl, (0, max(0, len(clip) - len(sl))))[: len(clip)]
+            seg = min(room, int(rng.uniform(*cfg.segment_s) * SR))
+            if len(clip) > seg:
+                st = int(rng.integers(0, len(clip) - seg + 1))
+                clip, sl = clip[st : st + seg], sl[st : st + seg]
             gain = 10 ** (rng.uniform(*cfg.speech_gain_db) / 20)
-            clean[pos : pos + len(clip)] += gain * clip / (np.abs(clip).max() + 1e-9)
-            # frame labels back to sample resolution for placement
-            sl = np.repeat(flab, HOP)[: len(clip)]
+            clean[pos : pos + len(clip)] += gain * scale * clip
             sample_lab[pos : pos + len(sl)] = np.maximum(sample_lab[pos : pos + len(sl)], sl)
             pos += len(clip) + int(rng.uniform(*cfg.gap_s) * SR)
             if pos >= total:

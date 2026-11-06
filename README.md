@@ -11,7 +11,7 @@ Frame-level VAD labels are expensive. Someone has to mark where speech starts an
 `synth.py` takes clean speech clips and noise clips and does three things:
 
 1. Labels each clean clip with an energy threshold relative to its own peak (35 dB below by default), then fills pauses under 100 ms. On clean audio this is reliable.
-2. Lays one to four clips out on an 8-second timeline with random silent gaps, so the speech positions, and therefore the frame labels, are known exactly.
+2. Lays one to four clips out on an 8-second timeline with random silent gaps, so the speech positions, and therefore the frame labels, are known exactly. Each clip is a random 0.8 to 3 second crop. FLEURS utterances run around 10 seconds, and without the crop a single clip fills the whole timeline, most frames are speech, and a detector that says "speech" to everything scores a high F1.
 3. Mixes in noise at a chosen SNR (20, 10, 5, 0 or -5 dB), and passes 30% of examples through a phone-line channel (300 to 3400 Hz band, 8 kHz round trip, mu-law).
 
 The model then has to make the energy threshold's decision on noisy audio, where an energy threshold fails. Training draws a fresh mixture for every example, so the training set is effectively unlimited.
@@ -45,25 +45,25 @@ Thresholds for every system are tuned once on the validation mixtures and frozen
 
 Noise classes never seen in training:
 
-| SNR (dB) | energy F1 | TinyVAD F1 | Silero F1 | TinyVAD minus Silero (95% CI) |
-|---|---|---|---|---|
-| 20 | _ | _ | _ | _ |
-| 10 | _ | _ | _ | _ |
-| 5 | _ | _ | _ | _ |
-| 0 | _ | _ | _ | _ |
-| -5 | _ | _ | _ | _ |
+| SNR (dB) | all-speech F1 | energy F1 | TinyVAD F1 | Silero F1 | TinyVAD minus Silero (95% CI) |
+|---|---|---|---|---|---|
+| 20 | _ | _ | _ | _ | _ |
+| 10 | _ | _ | _ | _ | _ |
+| 5 | _ | _ | _ | _ | _ |
+| 0 | _ | _ | _ | _ | _ |
+| -5 | _ | _ | _ | _ | _ |
 
 Held-out recordings, noise classes seen in training:
 
-| SNR (dB) | energy F1 | TinyVAD F1 | Silero F1 | TinyVAD minus Silero (95% CI) |
-|---|---|---|---|---|
-| 20 | _ | _ | _ | _ |
-| 10 | _ | _ | _ | _ |
-| 5 | _ | _ | _ | _ |
-| 0 | _ | _ | _ | _ |
-| -5 | _ | _ | _ | _ |
+| SNR (dB) | all-speech F1 | energy F1 | TinyVAD F1 | Silero F1 | TinyVAD minus Silero (95% CI) |
+|---|---|---|---|---|---|
+| 20 | _ | _ | _ | _ | _ |
+| 10 | _ | _ | _ | _ | _ |
+| 5 | _ | _ | _ | _ | _ |
+| 0 | _ | _ | _ | _ | _ |
+| -5 | _ | _ | _ | _ | _ |
 
-AUC, miss rate and false-alarm rate per SNR and condition are in [results/bench.json](results/bench.json), and the full tables are in [results/bench.md](results/bench.md).
+The all-speech column is the F1 of a detector that calls every frame speech. Any system near that number isn't detecting much. AUC, miss rate and false-alarm rate per SNR and condition are in [results/bench.json](results/bench.json), and the full tables are in [results/bench.md](results/bench.md).
 
 What I read from these: _
 

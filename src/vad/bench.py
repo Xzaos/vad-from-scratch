@@ -96,7 +96,9 @@ def score_condition(systems, thresholds, synth, snrs, n_per_snr, seed_base) -> d
         for other in ("silero", "energy"):
             if other in counts:
                 diffs[f"tinyvad-{other}"] = paired_f1_diff(counts["tinyvad"], counts[other], seed=1000 + int(snr * 10))
-        out[str(snr)] = {"systems": row, "f1_diff": diffs}
+        # Reference floor: a detector that calls every frame speech.
+        speech_frac = float(gold.mean())
+        out[str(snr)] = {"systems": row, "f1_diff": diffs, "speech_frac": speech_frac, "all_speech_f1": frame_f1(np.ones_like(gold), gold)["f1"]}
         print(snr, {k: round(v["f1"], 3) for k, v in row.items()}, {k: round(v["diff"], 3) for k, v in diffs.items()})
     return out
 
@@ -127,10 +129,10 @@ def run(model, val_synth, test_synth, unseen_synth=None, snrs=SNRS, n_per_snr: i
 def _table(cond: dict) -> list[str]:
     names = list(next(iter(cond.values()))["systems"].keys())
     diff_keys = list(next(iter(cond.values()))["f1_diff"].keys())
-    head = ["SNR (dB)"] + [f"{n} F1" for n in names] + [f"{n} AUC" for n in names] + [f"{k} F1 (95% CI)" for k in diff_keys]
+    head = ["SNR (dB)", "speech frames", "all-speech F1"] + [f"{n} F1" for n in names] + [f"{n} AUC" for n in names] + [f"{k} F1 (95% CI)" for k in diff_keys]
     lines = ["| " + " | ".join(head) + " |", "|" + "---|" * len(head)]
     for snr, r in cond.items():
-        cells = [snr]
+        cells = [snr, f"{r['speech_frac']:.0%}", f"{r['all_speech_f1']:.3f}"]
         cells += [f"{r['systems'][n]['f1']:.3f}" for n in names]
         cells += [f"{r['systems'][n]['auc']:.3f}" for n in names]
         cells += [f"{d['diff']:+.3f} [{d['lo']:+.3f}, {d['hi']:+.3f}]" for d in (r["f1_diff"][k] for k in diff_keys)]
